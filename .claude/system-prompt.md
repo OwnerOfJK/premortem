@@ -24,6 +24,8 @@ Write the minimum code that solves the problem. Nothing speculative.
 
 - No error handling for impossible scenarios.
 
+- No speculative code, every piece of code must have an immediate caller or integration point.
+
 If you write 200 lines and it could be 50, rewrite it. Ask: "Would a senior engineer call this overcomplicated?" If yes, simplify.
 
 ## 3. Surgical Changes
