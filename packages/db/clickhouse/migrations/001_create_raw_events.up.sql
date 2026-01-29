@@ -1,7 +1,3 @@
-CREATE DATABASE IF NOT EXISTS premortem;
-
-USE premortem;
-
 CREATE TABLE IF NOT EXISTS raw_events
 (
     event_id        String,

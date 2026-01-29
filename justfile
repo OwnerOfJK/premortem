@@ -5,11 +5,9 @@ default:
 
 # Start all infrastructure services
 up:
-  docker compose up -d
+  docker compose up
   @echo "Waiting for services to be healthy..."
   @sleep 5
-  just create-topics
-  just create-queues
 
 # Stop all infrastructure services
 down:
@@ -20,23 +18,13 @@ migrate: migrate-clickhouse migrate-postgres
 
 # Run ClickHouse migrations
 migrate-clickhouse:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  for f in packages/db/clickhouse/migrations/*.sql; do
-    echo "Running ClickHouse migration: $f"
-    curl -s "http://localhost:8123/" --data-binary @"$f"
-  done
-  echo "ClickHouse migrations complete."
+  migrate -path packages/db/clickhouse/migrations \
+    -database "clickhouse://localhost:9000?username=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}" up
 
 # Run Postgres migrations
 migrate-postgres:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  for f in packages/db/postgres/migrations/*.sql; do
-    echo "Running Postgres migration: $f"
-    PGPASSWORD=premortem psql -h localhost -U premortem -d premortem -f "$f"
-  done
-  echo "Postgres migrations complete."
+  migrate -path packages/db/postgres/migrations \
+    -database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable" up
 
 # Create Kafka topics
 create-topics:
@@ -57,3 +45,7 @@ dev-api:
 # Tail logs from all containers
 logs:
   docker compose logs -f
+
+#Optimised claude
+claude:
+    claude --system-prompt "$(cat .claude/system-prompt.md)"
