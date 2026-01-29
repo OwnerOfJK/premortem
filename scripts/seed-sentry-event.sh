@@ -95,9 +95,9 @@ fi
 
 echo ""
 echo "==> Verifying ClickHouse insertion..."
-sleep 1
+sleep 3
 
-RESULT=$(curl -s "http://localhost:8123/" \
+RESULT=$(curl -s "http://localhost:8123/?user=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}" \
   --data "SELECT event_id, error_type, error_signature, service, environment FROM raw_events FORMAT Pretty")
 
 if [ -z "$RESULT" ]; then
@@ -110,13 +110,13 @@ fi
 
 echo ""
 echo "==> Checking error_frequency materialized view..."
-FREQ=$(curl -s "http://localhost:8123/" \
+FREQ=$(curl -s "http://localhost:8123/?user=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}" \
   --data "SELECT * FROM error_frequency FORMAT Pretty")
 echo "${FREQ:-No rows yet}"
 
 echo ""
 echo "==> Checking error_rate materialized view..."
-RATE=$(curl -s "http://localhost:8123/" \
+RATE=$(curl -s "http://localhost:8123/?user=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}" \
   --data "SELECT * FROM error_rate FORMAT Pretty")
 echo "${RATE:-No rows yet}"
 
