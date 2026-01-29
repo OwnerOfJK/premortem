@@ -31,5 +31,10 @@ export async function insertRawEvent(event: RawEventRow): Promise<void> {
     table: "raw_events",
     values: [event],
     format: "JSONEachRow",
+    clickhouse_settings: {
+      date_time_input_format: "best_effort",
+      async_insert: 0,
+      wait_for_async_insert: 1,
+    },
   });
 }
