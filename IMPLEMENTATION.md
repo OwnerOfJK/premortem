@@ -59,12 +59,18 @@ premortem/
 │   └── agents/                         # Python Agent Workers
 │       ├── pyproject.toml              # uv
 │       ├── Dockerfile
-│       └── src/
-│           ├── common/                 # SQS consumer, Kafka producer, LLM+Langfuse
-│           ├── rca/                    # RCA Agent
-│           ├── fix/                    # Fix Agent
-│           ├── instrumentation/        # Instrumentation Agent
-│           └── evaluation/             # Evaluation Agent
+│       ├── main.py                     # Service entry point
+│       ├── config.py                   # Pydantic settings
+│       ├── sqs_consumer.py             # Generic SQS consumer base
+│       ├── kafka_producer.py           # Kafka producer wrapper
+│       ├── rca/                        # RCA Agent (Modal + GPT-4o-mini)
+│       │   ├── consumer.py
+│       │   ├── agent.py
+│       │   ├── modal_fn.py
+│       │   └── prompts.py
+│       ├── fix/                        # Fix Agent (future)
+│       ├── instrumentation/            # Instrumentation Agent (future)
+│       └── evaluation/                 # Evaluation Agent (future)
 │
 ├── scripts/
 │   ├── setup.sh
@@ -122,16 +128,30 @@ premortem/
 **Goal:** Context assembled from ClickHouse evidence. RCA Agent reasons over it, emits `RootCauseProposed`.
 
 ### Deliverables
-- `services/api/src/context-builder/`: SQS consumer for `context-builder-tasks`, queries ClickHouse for relevant errors/logs/deploys, optionally fetches code via GitHub API, emits `ContextBuilt`
-- `services/agents/` Python project setup: `pyproject.toml` (uv), common SQS consumer base, Kafka producer, Pydantic models, LLM wrapper with Langfuse tracing
-- `services/agents/src/rca/`: SQS consumer for `rca-tasks`, LLM prompt with structured context → hypothesis + confidence, emits `RootCauseProposed`
-- Dispatcher routing: `ContextBuilt` → `rca-tasks`, `RootCauseProposed` (high confidence) → `fix-tasks`, (low confidence) → `instrumentation-tasks`
+- `services/api/src/context-builder/`: SQS consumer for `context-builder-tasks`, queries ClickHouse for relevant errors/logs/deploys (samples, aggregates, deploy hashes), builds structured markdown context summary, emits `ContextBuilt`
+  - `index.ts`: SQS poll loop and Kafka producer
+  - `build.ts`: Core context assembly logic
+  - `queries.ts`: ClickHouse query helpers
+- `services/agents/` Python project setup: `pyproject.toml` (uv), modular architecture with reusable components
+  - `config.py`: Pydantic settings for Kafka, SQS, OpenAI, Modal, Langfuse
+  - `sqs_consumer.py`: Generic SQS consumer with graceful shutdown
+  - `kafka_producer.py`: Confluent Kafka producer wrapper
+  - `main.py`: Service entry point
+- `services/agents/rca/`: RCA agent implementation using Modal serverless functions
+  - `consumer.py`: Binds SQS queue to handler
+  - `agent.py`: Handler orchestration, emits `RootCauseProposed`
+  - `modal_fn.py`: Modal serverless function running GPT-4o-mini via LangChain with structured JSON output
+  - `prompts.py`: System and user prompt templates
+- Dispatcher routing: `ContextBuilt` → `rca-tasks`, `RootCauseProposed` (confidence ≥ 0.7) → `fix-tasks`, (confidence < 0.7) → `instrumentation-tasks`
 - Python agent Dockerfile added to docker-compose
+- Environment variables: `OPENAI_API_KEY`, `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET`, `LANGFUSE_*`
+- Integration tests for context builder and dispatcher routing
 
 ### Verify
-- Trigger incident → `ContextBuilt` on Kafka with structured context
-- `RootCauseProposed` on Kafka with hypothesis + confidence
-- Langfuse shows traced agent run
+- Trigger incident → `ContextBuilt` on Kafka with structured context (error count, services, deploy hashes, stacktrace samples)
+- `RootCauseProposed` on Kafka with hypothesis + confidence + evidence_refs
+- Langfuse shows traced agent run with GPT-4o-mini calls
+- Integration tests pass: context builder, dispatcher routing (all confidence thresholds)
 
 ---
 
