@@ -63,6 +63,10 @@ build: clean
 api:
   cd services/api && pnpm dev
 
+# Start the agents service
+agents:
+  cd services/agents && pip install -e . && premortem-agents
+
 # Tail logs from all containers
 logs:
   docker compose logs -f
@@ -73,3 +77,4 @@ claude:
 
 test:
     pnpm --filter @premortem/api test
+    pnpm --filter @premortem/api vitest run
