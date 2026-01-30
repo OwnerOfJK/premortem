@@ -5,6 +5,10 @@ import sentryRouter from "./routes/webhooks/sentry.js";
 import incidentsRouter from "./routes/incidents.js";
 import { startDetector, stopDetector } from "./detector/index.js";
 import { startDispatcher, stopDispatcher } from "./dispatcher/index.js";
+import {
+  startContextBuilder,
+  stopContextBuilder,
+} from "./context-builder/index.js";
 import { disconnectProducer } from "./lib/kafka.js";
 import { db } from "./lib/postgres.js";
 
@@ -20,6 +24,7 @@ const server = app.listen(config.API_PORT, () => {
   console.log(`API listening on port ${config.API_PORT}`);
 
   startDetector();
+  startContextBuilder();
   startDispatcherWithRetry();
 });
 
@@ -51,6 +56,7 @@ async function shutdown(): Promise<void> {
   dispatcherStopping = true;
   console.log("Shutting down gracefully...");
   stopDetector();
+  stopContextBuilder();
   await stopDispatcher();
   await disconnectProducer();
   await db.destroy();

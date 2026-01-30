@@ -4,9 +4,12 @@ import {
   SQS_QUEUES,
   idempotencyKey,
   type TimelineEvent,
+  type RootCauseProposedEvent,
 } from "@premortem/shared";
 import { sendSqsMessage } from "../lib/sqs.js";
 import { kafka } from "../lib/kafka.js";
+
+const RCA_CONFIDENCE_THRESHOLD = 0.7;
 
 let consumer: Consumer | null = null;
 const processedKeys = new Set<string>();
@@ -48,6 +51,24 @@ export async function startDispatcher(): Promise<void> {
             `Dispatched IncidentDetected to ${SQS_QUEUES.CONTEXT_BUILDER_TASKS}: ${event.incident_id}`,
           );
           break;
+        case "ContextBuilt":
+          await sendSqsMessage(SQS_QUEUES.RCA_TASKS, event);
+          console.log(
+            `Dispatched ContextBuilt to ${SQS_QUEUES.RCA_TASKS}: ${event.incident_id}`,
+          );
+          break;
+        case "RootCauseProposed": {
+          const rcaEvent = event as RootCauseProposedEvent;
+          const queue =
+            rcaEvent.payload.confidence >= RCA_CONFIDENCE_THRESHOLD
+              ? SQS_QUEUES.FIX_TASKS
+              : SQS_QUEUES.INSTRUMENTATION_TASKS;
+          await sendSqsMessage(queue, event);
+          console.log(
+            `Dispatched RootCauseProposed to ${queue}: ${event.incident_id} (confidence=${rcaEvent.payload.confidence})`,
+          );
+          break;
+        }
         default:
           console.log(
             `Dispatcher ignoring event type: ${event.event_type}`,

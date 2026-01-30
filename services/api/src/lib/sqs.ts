@@ -41,4 +41,4 @@ export async function sendSqsMessage(
   );
 }
 
-export { sqsClient };
+export { sqsClient, getQueueUrl };
